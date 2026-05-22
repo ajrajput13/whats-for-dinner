@@ -116,6 +116,176 @@ let pendingRatings = {};
 let lastWinnerName = null;   // V5: track last spin winner for veto
 let vetoedNames    = new Set(); // V5: names vetoed this spin session
 
+// V7: custom filter options added by the user (cuisine/meal/protein/carbs)
+let customOptions  = { cuisine: [], meal: [], protein: [], carbs: [] };
+
+// V7: built-in option lists for each filter group (shared between filter screen + edit form)
+const BUILT_IN_OPTIONS = {
+  cuisine: [
+    { val: 'American',      label: '🍔 American' },
+    { val: 'Mexican',       label: '🌮 Mexican' },
+    { val: 'Italian',       label: '🍝 Italian' },
+    { val: 'Indian',        label: '🍛 Indian' },
+    { val: 'Asian',         label: '🥢 Asian' },
+    { val: 'Mediterranean', label: '🫒 Mediterranean' },
+    { val: 'Pizza',         label: '🍕 Pizza' },
+    { val: 'Japanese',      label: '🍱 Japanese' },
+    { val: 'Chinese',       label: '🥡 Chinese' },
+    { val: 'Thai',          label: '🍜 Thai' },
+    { val: 'Brunch',        label: '🥞 Brunch' },
+    { val: 'Bakery',        label: '🥐 Bakery' },
+    { val: 'Cafe',          label: '☕ Cafe' },
+    { val: 'Fast Food',     label: '🍟 Fast Food' },
+  ],
+  meal: [
+    { val: 'any',             label: 'Any time' },
+    { val: 'breakfast',       label: 'Breakfast' },
+    { val: 'lunch',           label: 'Lunch' },
+    { val: 'dinner',          label: 'Dinner' },
+    { val: 'breakfast-lunch', label: 'Brunch' },
+    { val: 'lunch-dinner',    label: 'Lunch or Dinner' },
+  ],
+  protein: [
+    { val: 'any',         label: 'Any' },
+    { val: 'chicken',     label: '🐔 Chicken' },
+    { val: 'beef',        label: '🥩 Beef' },
+    { val: 'fish',        label: '🐟 Fish/Seafood' },
+    { val: 'pork',        label: '🐖 Pork' },
+    { val: 'egg',         label: '🥚 Egg' },
+    { val: 'vegetarian',  label: '🌱 Vegetarian' },
+  ],
+  carbs: [
+    { val: 'any',          label: 'Any' },
+    { val: 'pasta',        label: '🍝 Pasta' },
+    { val: 'rice',         label: '🍚 Rice' },
+    { val: 'tortilla',     label: '🌮 Tortilla' },
+    { val: 'pizza dough',  label: '🍕 Pizza Dough' },
+    { val: 'bread',        label: '🍞 Bread' },
+    { val: 'naan',         label: '🫓 Naan' },
+    { val: 'low-carb',     label: '🥬 Low Carb' },
+  ],
+};
+
+// Merge built-in + custom options for a group
+function getAllOptions(group) {
+  const builtIn = BUILT_IN_OPTIONS[group] || [];
+  const builtInVals = new Set(builtIn.map(o => o.val.toLowerCase()));
+  const customs = (customOptions[group] || [])
+    .filter(c => c && !builtInVals.has(String(c).toLowerCase()))
+    .map(c => ({ val: c, label: c, custom: true }));
+  return [...builtIn, ...customs];
+}
+
+// Render pills for the Filter screen (used by Find Filters mode)
+function renderFilterScreenPills() {
+  ['meal','cuisine','protein','carbs'].forEach(group => {
+    const container = document.getElementById('filter-' + group);
+    if (!container) return;
+    const opts = getAllOptions(group);
+    const current = activeFilters[group] || 'any';
+    let html = `<button class="pill${current==='any'?' active':''}" data-filter="${group}" data-val="any">Any</button>`;
+    opts.forEach(o => {
+      if (o.val === 'any') return; // already added
+      const active = current === o.val ? ' active' : '';
+      html += `<button class="pill${active}" data-filter="${group}" data-val="${escapeAttr(o.val)}">${escapeHtml(o.label)}</button>`;
+    });
+    container.innerHTML = html;
+  });
+  // Wire up the pill click behavior (delegated below) — pills inherit from existing CSS+JS
+}
+
+// Render pills for the Edit form
+function renderEditFormPills() {
+  ['cuisine','meal','protein','carbs'].forEach(group => {
+    const container = document.getElementById('ef-' + group);
+    if (!container) return;
+    const opts = getAllOptions(group);
+    let html = '';
+    opts.forEach(o => {
+      html += `<button type="button" class="edit-pill" data-val="${escapeAttr(o.val)}">${escapeHtml(o.label)}</button>`;
+    });
+    // Add the "+ Add new" pill at the end
+    html += `<button type="button" class="edit-pill edit-pill-add" data-add-group="${group}" onclick="promptAddOption('${group}')">+ Add new</button>`;
+    container.innerHTML = html;
+  });
+}
+
+// Re-render every dynamic option group everywhere
+function renderAllOptionPills() {
+  renderFilterScreenPills();
+  // Note: we intentionally don't re-render the edit form pills here,
+  // because that would wipe a user's in-progress selections if the
+  // form is currently open. The form re-renders its own pills on open.
+  // The global pill click delegate (in this file below) handles .pill clicks automatically.
+}
+
+// Helper: HTML attribute-safe escape
+function escapeAttr(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// "+ Add new" prompt for a filter group
+function promptAddOption(group) {
+  const labels = { cuisine: 'cuisine', meal: 'meal type', protein: 'protein', carbs: 'carb' };
+  const name = prompt(`Add a new ${labels[group] || group}:`, '');
+  if (name === null) return; // cancelled
+  const clean = name.trim();
+  if (!clean) return;
+  if (clean.length > 30) {
+    showToast('Too long — keep it under 30 characters.');
+    return;
+  }
+  // Check if it already exists (case-insensitive) in built-in or custom
+  const existing = getAllOptions(group).find(o => o.val.toLowerCase() === clean.toLowerCase());
+  if (existing) {
+    showToast(`"${clean}" already exists.`);
+    // Auto-select the existing one
+    const pill = document.querySelector(`#ef-${group} .edit-pill[data-val="${CSS.escape(existing.val)}"]`);
+    if (pill) {
+      if (group === 'meal') {
+        document.querySelectorAll(`#ef-${group} .edit-pill`).forEach(p => p.classList.remove('active'));
+      }
+      pill.classList.add('active');
+    }
+    return;
+  }
+
+  // Snapshot current form selections across ALL dynamic pill groups
+  // so we can restore them after re-rendering the pills
+  const snapshot = {};
+  ['cuisine','meal','protein','carbs'].forEach(g => {
+    const ids = Array.from(document.querySelectorAll(`#ef-${g} .edit-pill.active`))
+      .map(p => p.dataset.val);
+    snapshot[g] = ids;
+  });
+
+  // Add to customOptions and save
+  if (!customOptions[group]) customOptions[group] = [];
+  customOptions[group].push(clean);
+  saveItemsNow();
+
+  // Re-render pills (this wipes active classes — that's why we snapshotted)
+  renderEditFormPills();
+
+  // Restore the snapshot AND select the newly added pill
+  Object.keys(snapshot).forEach(g => {
+    snapshot[g].forEach(val => {
+      const pill = document.querySelector(`#ef-${g} .edit-pill[data-val="${CSS.escape(val)}"]`);
+      if (pill) pill.classList.add('active');
+    });
+  });
+  // Now select the new one
+  const newPill = document.querySelector(`#ef-${group} .edit-pill[data-val="${CSS.escape(clean)}"]`);
+  if (newPill) {
+    if (group === 'meal') {
+      // Single-select: clear others first
+      document.querySelectorAll(`#ef-${group} .edit-pill`).forEach(p => p.classList.remove('active'));
+    }
+    newPill.classList.add('active');
+  }
+  showToast(`Added "${clean}" ✓`);
+}
+
 // ---- INIT ------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
   initDarkMode();
@@ -174,14 +344,18 @@ async function initFirebase() {
         const data = snap.data();
         allItems = Array.isArray(data.items) ? data.items : [];
         csvHeader = data.csvHeader || csvHeaderOrder;
+        customOptions = data.customOptions || { cuisine: [], meal: [], protein: [], carbs: [] };
       } else {
         // First run anywhere — bootstrap Firestore with the seed data
         allItems = JSON.parse(JSON.stringify(SEED_ITEMS));
         csvHeader = csvHeaderOrder;
+        customOptions = { cuisine: [], meal: [], protein: [], carbs: [] };
         saveItemsNow();
       }
       // Re-render whatever screen is visible
       try { refreshCurrentScreen(); } catch (e) { console.error('Render error:', e); }
+      // Re-render filter screens and edit form options if they exist
+      try { renderAllOptionPills(); } catch (e) {}
     }, (err) => {
       console.error('Sync error:', err);
       setSyncStatus('error', 'sync error');
@@ -192,7 +366,9 @@ async function initFirebase() {
     // Fallback: load seed locally so the app is still usable
     allItems = JSON.parse(JSON.stringify(SEED_ITEMS));
     csvHeader = csvHeaderOrder;
+    customOptions = { cuisine: [], meal: [], protein: [], carbs: [] };
     try { refreshCurrentScreen(); } catch (err) {}
+    try { renderAllOptionPills(); } catch (err) {}
   }
 }
 
@@ -210,7 +386,8 @@ async function saveItemsNow() {
   try {
     await db.collection('whats_for_dinner').doc('shared').set({
       items: allItems,
-      csvHeader: csvHeader
+      csvHeader: csvHeader,
+      customOptions: customOptions
     });
     setSyncStatus('saved', '✓ synced');
   } catch (e) {
@@ -238,11 +415,12 @@ function setSyncStatus(kind, text) {
 function refreshCurrentScreen() {
   const active = document.querySelector('.screen.active');
   if (!active) return;
-  // If we're on results, re-render results; otherwise nothing dynamic to refresh
   if (active.id === 'screen-results') {
     if (currentMode) renderResults();
   } else if (active.id === 'screen-surprise') {
     // Surprise screen content is rendered once when navigated to
+  } else if (active.id === 'screen-configure') {
+    renderConfigureList();
   }
 }
 
@@ -336,6 +514,7 @@ function goToMood()    { showScreen("screen-mood"); }
 // ===================================================
 function selectMode(mode) {
   currentMode = mode;
+  renderFilterScreenPills(); // ensure pills exist with current custom options
   resetPills();
   const map = {
     familiar_restaurant:{ title:"Where should we eat tonight?",  sub:"Filter your favorites, or try the Mood Filter 🍴" },
@@ -1210,6 +1389,7 @@ function openAddForm() {
   editingItemName = null;
   document.getElementById('edit-title').textContent = 'Add New';
   document.getElementById('ef-delete').classList.add('hidden');
+  renderEditFormPills(); // ensure dynamic pills are present
   resetEditForm();
   // Default to first category if user just wants to add quickly
   showScreen('screen-edit');
@@ -1226,6 +1406,7 @@ function openEditForm(name) {
   document.getElementById('edit-title').textContent = 'Edit: ' + item.name;
   document.getElementById('ef-delete').classList.remove('hidden');
 
+  renderEditFormPills(); // ensure dynamic pills are present
   resetEditForm();
   document.getElementById('ef-name').value     = item.name || '';
   document.getElementById('ef-distance').value = (item.distance_miles && item.distance_miles !== '0') ? item.distance_miles : '';
@@ -1268,6 +1449,11 @@ function resetEditForm() {
   });
   document.querySelectorAll('.edit-pill').forEach(p => p.classList.remove('active'));
   setStars(0);
+  // Reset duplicate warning
+  const warnEl = document.getElementById('ef-name-warn');
+  if (warnEl) warnEl.classList.add('hidden');
+  const nameEl = document.getElementById('ef-name');
+  if (nameEl) nameEl.classList.remove('input-error');
 }
 
 function setPillsValue(groupId, value, isMulti) {
@@ -1287,9 +1473,38 @@ function setPillsValue(groupId, value, isMulti) {
 function readPillsValue(groupId, isMulti) {
   const container = document.getElementById(groupId);
   if (!container) return '';
-  const active = Array.from(container.querySelectorAll('.edit-pill.active')).map(p => p.dataset.val);
+  const active = Array.from(container.querySelectorAll('.edit-pill.active'))
+    .filter(p => !p.classList.contains('edit-pill-add'))
+    .map(p => p.dataset.val);
   if (!isMulti) return active[0] || '';
   return active.join('/');
+}
+
+// Live duplicate-name detection on the edit form
+function checkDuplicateName() {
+  const input  = document.getElementById('ef-name');
+  const warnEl = document.getElementById('ef-name-warn');
+  if (!input || !warnEl) return;
+  const name = input.value.trim();
+  if (!name) {
+    warnEl.classList.add('hidden');
+    input.classList.remove('input-error');
+    return;
+  }
+  const nameLower = name.toLowerCase();
+  const conflict = allItems.find(i =>
+    (i.name || '').toLowerCase() === nameLower &&
+    i.name !== editingItemName
+  );
+  if (conflict) {
+    const catLabel = (CATEGORY_INFO[conflict.category] || {}).label || conflict.category;
+    warnEl.innerHTML = `⚠️ <strong>${escapeHtml(conflict.name)}</strong> already exists in <em>${escapeHtml(catLabel)}</em>. Pick a different name or edit the existing one.`;
+    warnEl.classList.remove('hidden');
+    input.classList.add('input-error');
+  } else {
+    warnEl.classList.add('hidden');
+    input.classList.remove('input-error');
+  }
 }
 
 function setStars(n) {
@@ -1313,7 +1528,7 @@ function initEditFormListeners() {
     if (!c) return;
     c.addEventListener('click', e => {
       const btn = e.target.closest('.edit-pill');
-      if (!btn) return;
+      if (!btn || btn.classList.contains('edit-pill-add')) return;
       c.querySelectorAll('.edit-pill').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
       if (groupId === 'ef-category') updateEditFormVisibility();
@@ -1325,7 +1540,7 @@ function initEditFormListeners() {
     if (!c) return;
     c.addEventListener('click', e => {
       const btn = e.target.closest('.edit-pill');
-      if (!btn) return;
+      if (!btn || btn.classList.contains('edit-pill-add')) return;
       btn.classList.toggle('active');
     });
   });
@@ -1366,6 +1581,12 @@ function saveEditForm() {
   );
   if (conflict) {
     showToast(`"${name}" already exists in your list.`);
+    checkDuplicateName(); // populate the inline warning if not already shown
+    const nameEl = document.getElementById('ef-name');
+    if (nameEl) {
+      nameEl.focus();
+      nameEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
     return;
   }
 
@@ -1434,11 +1655,3 @@ function deleteEditForm() {
 
 // Initialize edit form listeners once the DOM is ready
 document.addEventListener('DOMContentLoaded', initEditFormListeners);
-
-// Make sure the configure list re-renders when Firestore data syncs in
-const _originalRefresh = (typeof refreshCurrentScreen === 'function') ? refreshCurrentScreen : null;
-refreshCurrentScreen = function() {
-  if (_originalRefresh) _originalRefresh();
-  const active = document.querySelector('.screen.active');
-  if (active && active.id === 'screen-configure') renderConfigureList();
-};
