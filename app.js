@@ -1072,3 +1072,373 @@ function cancelH2H() {
   h2hState.phase = "p1";
   showScreen("screen-results");
 }
+
+// ===================================================
+//  TOAST HELPER (for Configure/Edit feedback)
+// ===================================================
+let _toastTimer = null;
+function showToast(msg) {
+  let el = document.getElementById('wfd-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'wfd-toast';
+    el.style.cssText = `
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--espresso, #2E2218);
+      color: var(--cream, #FAF2E0);
+      padding: 12px 22px;
+      border-radius: 30px;
+      font-family: 'Lato', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+      transition: transform 0.3s ease;
+      z-index: 9999;
+      pointer-events: none;
+      max-width: 90vw;
+      text-align: center;
+    `;
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  // Force reflow then animate in
+  requestAnimationFrame(() => {
+    el.style.transform = 'translateX(-50%) translateY(0)';
+  });
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => {
+    el.style.transform = 'translateX(-50%) translateY(80px)';
+  }, 2500);
+}
+
+// ===================================================
+//  CONFIGURE — list, search, filter
+// ===================================================
+let configureFilter = 'all';
+let editingItemName = null; // null = adding new, otherwise editing existing
+
+const CATEGORY_INFO = {
+  familiar_restaurant: { emoji: '🍴', label: 'Familiar Restaurant' },
+  new_restaurant:      { emoji: '✨', label: 'New Restaurant'      },
+  familiar_home:       { emoji: '🥘', label: 'Familiar Recipe'     },
+  new_home:            { emoji: '📖', label: 'New Recipe'          },
+};
+
+function openConfigure() {
+  configureFilter = 'all';
+  document.querySelectorAll('.config-chip').forEach(c => c.classList.toggle('active', c.dataset.cat === 'all'));
+  const si = document.getElementById('configure-search');
+  if (si) si.value = '';
+  renderConfigureList();
+  showScreen('screen-configure');
+}
+
+function setConfigureFilter(cat, el) {
+  configureFilter = cat;
+  document.querySelectorAll('.config-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderConfigureList();
+}
+
+function renderConfigureList() {
+  const listEl  = document.getElementById('configure-list');
+  const emptyEl = document.getElementById('configure-empty');
+  const searchEl = document.getElementById('configure-search');
+  const q = (searchEl?.value || '').trim().toLowerCase();
+
+  // Update counts
+  const counts = { all: allItems.length };
+  Object.keys(CATEGORY_INFO).forEach(k => counts[k] = 0);
+  allItems.forEach(i => { if (counts[i.category] !== undefined) counts[i.category]++; });
+  Object.keys(counts).forEach(k => {
+    const el = document.getElementById('cfg-count-' + k);
+    if (el) el.textContent = counts[k];
+  });
+
+  // Filter
+  let rows = allItems.slice();
+  if (configureFilter !== 'all') rows = rows.filter(i => i.category === configureFilter);
+  if (q) rows = rows.filter(i => (i.name || '').toLowerCase().includes(q));
+
+  // Sort: alphabetical by name
+  rows.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+  if (rows.length === 0) {
+    listEl.innerHTML = '';
+    emptyEl.classList.remove('hidden');
+    return;
+  }
+  emptyEl.classList.add('hidden');
+
+  listEl.innerHTML = rows.map(item => {
+    const info = CATEGORY_INFO[item.category] || { emoji: '🍽️', label: item.category || '' };
+    const rating = parseInt(item.rating);
+    const ratingStr = (!isNaN(rating) && rating > 0) ? `★ ${rating}` : '';
+    const cuisine = item.cuisine || '';
+    const isRestaurant = (item.category || '').includes('restaurant');
+    const dist = item.distance_miles;
+    const distStr = (isRestaurant && dist && dist !== '0') ? `${dist} mi` : '';
+    return `
+      <div class="config-row" onclick="openEditForm('${escQ(item.name)}')">
+        <span class="config-row-emoji">${info.emoji}</span>
+        <div class="config-row-body">
+          <p class="config-row-name">${escapeHtml(item.name || '(unnamed)')}</p>
+          <div class="config-row-meta">
+            <span class="config-row-meta-tag">${escapeHtml(info.label)}</span>
+            ${cuisine ? `<span class="config-row-meta-tag">${escapeHtml(cuisine)}</span>` : ''}
+            ${distStr ? `<span class="config-row-meta-tag">${escapeHtml(distStr)}</span>` : ''}
+          </div>
+        </div>
+        ${ratingStr ? `<span class="config-row-rating">${ratingStr}</span>` : ''}
+        <button class="config-row-edit" onclick="event.stopPropagation();openEditForm('${escQ(item.name)}')">✏️ Edit</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// ===================================================
+//  ADD / EDIT FORM
+// ===================================================
+function openAddForm() {
+  editingItemName = null;
+  document.getElementById('edit-title').textContent = 'Add New';
+  document.getElementById('ef-delete').classList.add('hidden');
+  resetEditForm();
+  // Default to first category if user just wants to add quickly
+  showScreen('screen-edit');
+  updateEditFormVisibility();
+}
+
+function openEditForm(name) {
+  const item = allItems.find(i => i.name === name);
+  if (!item) {
+    showToast('Could not find that item.');
+    return;
+  }
+  editingItemName = item.name;
+  document.getElementById('edit-title').textContent = 'Edit: ' + item.name;
+  document.getElementById('ef-delete').classList.remove('hidden');
+
+  resetEditForm();
+  document.getElementById('ef-name').value     = item.name || '';
+  document.getElementById('ef-distance').value = (item.distance_miles && item.distance_miles !== '0') ? item.distance_miles : '';
+  document.getElementById('ef-notes').value    = item.notes || '';
+  document.getElementById('ef-recipe').value   = item.recipe || '';
+  document.getElementById('ef-review').value   = item.rating_note || '';
+
+  // Category (single-select)
+  setPillsValue('ef-category', item.category, false);
+
+  // Cuisine (multi-select, slash-delimited)
+  setPillsValue('ef-cuisine', item.cuisine, true);
+
+  // Meal type (single-select)
+  setPillsValue('ef-meal', item.meal_type, false);
+
+  // Protein (multi)
+  setPillsValue('ef-protein', item.protein, true);
+
+  // Carbs (multi)
+  setPillsValue('ef-carbs', item.carbs, true);
+
+  // Stars
+  const rating = parseInt(item.rating);
+  setStars(!isNaN(rating) ? rating : 0);
+
+  updateEditFormVisibility();
+  showScreen('screen-edit');
+}
+
+function closeEditForm() {
+  editingItemName = null;
+  showScreen('screen-configure');
+}
+
+function resetEditForm() {
+  ['ef-name','ef-distance','ef-notes','ef-recipe','ef-review'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.querySelectorAll('.edit-pill').forEach(p => p.classList.remove('active'));
+  setStars(0);
+}
+
+function setPillsValue(groupId, value, isMulti) {
+  const container = document.getElementById(groupId);
+  if (!container) return;
+  const pills = container.querySelectorAll('.edit-pill');
+  pills.forEach(p => p.classList.remove('active'));
+  if (!value) return;
+  const values = isMulti
+    ? value.split('/').map(v => v.trim().toLowerCase()).filter(Boolean)
+    : [value.trim().toLowerCase()];
+  pills.forEach(p => {
+    if (values.includes((p.dataset.val || '').toLowerCase())) p.classList.add('active');
+  });
+}
+
+function readPillsValue(groupId, isMulti) {
+  const container = document.getElementById(groupId);
+  if (!container) return '';
+  const active = Array.from(container.querySelectorAll('.edit-pill.active')).map(p => p.dataset.val);
+  if (!isMulti) return active[0] || '';
+  return active.join('/');
+}
+
+function setStars(n) {
+  document.querySelectorAll('#ef-stars .edit-star').forEach(s => {
+    s.classList.toggle('active', parseInt(s.dataset.stars) <= n);
+  });
+  document.getElementById('ef-stars').dataset.value = String(n);
+}
+
+function clearEditStars() { setStars(0); }
+
+// Wire up form interactions once on load
+function initEditFormListeners() {
+  // Star clicks
+  document.querySelectorAll('#ef-stars .edit-star').forEach(s => {
+    s.addEventListener('click', () => setStars(parseInt(s.dataset.stars)));
+  });
+  // Single-select pill groups: category, meal
+  ['ef-category', 'ef-meal'].forEach(groupId => {
+    const c = document.getElementById(groupId);
+    if (!c) return;
+    c.addEventListener('click', e => {
+      const btn = e.target.closest('.edit-pill');
+      if (!btn) return;
+      c.querySelectorAll('.edit-pill').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      if (groupId === 'ef-category') updateEditFormVisibility();
+    });
+  });
+  // Multi-select pill groups: cuisine, protein, carbs
+  ['ef-cuisine', 'ef-protein', 'ef-carbs'].forEach(groupId => {
+    const c = document.getElementById(groupId);
+    if (!c) return;
+    c.addEventListener('click', e => {
+      const btn = e.target.closest('.edit-pill');
+      if (!btn) return;
+      btn.classList.toggle('active');
+    });
+  });
+}
+
+// Toggle which fields show based on selected category (restaurant vs recipe, familiar vs new)
+function updateEditFormVisibility() {
+  const cat = readPillsValue('ef-category', false);
+  const isRestaurant = cat.includes('restaurant');
+  const isFamiliar   = cat.startsWith('familiar_');
+
+  // Distance only matters for restaurants
+  document.getElementById('ef-distance-field').style.display = isRestaurant ? '' : 'none';
+  // Full recipe textarea only matters for home/recipes
+  document.getElementById('ef-recipe-field').style.display   = (cat && !isRestaurant) ? '' : 'none';
+  // Review (stars + note) only shown when something is tried — i.e. familiar
+  document.getElementById('ef-review-field').style.display   = isFamiliar ? '' : 'none';
+}
+
+function saveEditForm() {
+  const name = document.getElementById('ef-name').value.trim();
+  if (!name) {
+    showToast('Please give it a name.');
+    document.getElementById('ef-name').focus();
+    return;
+  }
+  const category = readPillsValue('ef-category', false);
+  if (!category) {
+    showToast('Please pick a category.');
+    return;
+  }
+
+  // Check for duplicate name (case-insensitive) — only when adding new, or when renaming
+  const nameLower = name.toLowerCase();
+  const conflict = allItems.find(i =>
+    (i.name || '').toLowerCase() === nameLower &&
+    i.name !== editingItemName
+  );
+  if (conflict) {
+    showToast(`"${name}" already exists in your list.`);
+    return;
+  }
+
+  const isRestaurant = category.includes('restaurant');
+  const isFamiliar   = category.startsWith('familiar_');
+
+  const cuisine = readPillsValue('ef-cuisine', true);
+  const meal    = readPillsValue('ef-meal', false) || 'any';
+  const protein = readPillsValue('ef-protein', true) || 'any';
+  const carbs   = readPillsValue('ef-carbs', true) || 'any';
+
+  const distance = isRestaurant
+    ? (document.getElementById('ef-distance').value || '0')
+    : '0';
+  const notes    = document.getElementById('ef-notes').value.trim();
+  const recipe   = isRestaurant ? '' : document.getElementById('ef-recipe').value.trim();
+  const review   = isFamiliar ? document.getElementById('ef-review').value.trim() : '';
+  const stars    = isFamiliar ? parseInt(document.getElementById('ef-stars').dataset.value || '0') : 0;
+
+  const newItem = {
+    category,
+    name,
+    cuisine,
+    meal_type: meal,
+    protein,
+    carbs,
+    distance_miles: String(distance),
+    notes,
+    recipe,
+    tried: isFamiliar ? 'yes' : 'no',
+    rating: stars > 0 ? String(stars) : '',
+    rating_note: review,
+  };
+
+  if (editingItemName) {
+    // Update existing
+    const idx = allItems.findIndex(i => i.name === editingItemName);
+    if (idx >= 0) {
+      // Preserve any unknown fields from existing record
+      allItems[idx] = { ...allItems[idx], ...newItem };
+    } else {
+      allItems.push(newItem);
+    }
+    showToast(`Updated ${name} ✓`);
+  } else {
+    allItems.push(newItem);
+    showToast(`Added ${name} ✓`);
+  }
+
+  saveItemsNow();
+  editingItemName = null;
+  showScreen('screen-configure');
+  renderConfigureList();
+}
+
+function deleteEditForm() {
+  if (!editingItemName) return;
+  if (!confirm(`Delete "${editingItemName}" forever? This cannot be undone.`)) return;
+  allItems = allItems.filter(i => i.name !== editingItemName);
+  saveItemsNow();
+  showToast(`Deleted ${editingItemName}`);
+  editingItemName = null;
+  showScreen('screen-configure');
+  renderConfigureList();
+}
+
+// Initialize edit form listeners once the DOM is ready
+document.addEventListener('DOMContentLoaded', initEditFormListeners);
+
+// Make sure the configure list re-renders when Firestore data syncs in
+const _originalRefresh = (typeof refreshCurrentScreen === 'function') ? refreshCurrentScreen : null;
+refreshCurrentScreen = function() {
+  if (_originalRefresh) _originalRefresh();
+  const active = document.querySelector('.screen.active');
+  if (active && active.id === 'screen-configure') renderConfigureList();
+};
