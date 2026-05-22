@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="What's For Dinner" />
+  <meta name="theme-color" content="#F5E1C8" />
+  <title>What's for Dinner? 🍽️</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo" onclick="goHome()">
+        <span class="logo-icon">🍽️</span>
+        <div class="logo-text">
+          <span class="logo-title">What's for Dinner?</span>
+          <span class="logo-sub">Let's figure it out together</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <span id="sync-status" class="sync-status" title="Sync status"></span>
+        <button class="dark-toggle" id="dark-toggle" onclick="toggleDark()" title="Toggle dark mode">🌙</button>
+        <button class="home-btn" onclick="goHome()">← Start Over</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== HOME SCREEN ===================== -->
+  <section id="screen-home" class="screen active">
+    <div class="home-hero">
+      <h1 class="hero-title">So… <em>what's for dinner?</em></h1>
+      <p class="hero-sub">Pick a vibe and let's figure out the rest.</p>
+    </div>
+    <div class="home-cards">
+
+      <button class="mode-card card-outside-familiar" onclick="selectMode('familiar_restaurant')">
+        <span class="card-emoji">🏠</span>
+        <span class="card-title">Go Out</span>
+        <span class="card-sub">Somewhere we love</span>
+        <span class="card-tag">Familiar favorites</span>
+      </button>
+
+      <button class="mode-card card-new-outside" onclick="selectMode('new_restaurant')">
+        <span class="card-emoji">✨</span>
+        <span class="card-title">Try Something New</span>
+        <span class="card-sub">A restaurant we haven't been to</span>
+        <span class="card-tag">Adventure mode</span>
+      </button>
+
+      <button class="mode-card card-home-familiar" onclick="selectMode('familiar_home')">
+        <span class="card-emoji">🥘</span>
+        <span class="card-title">Cook at Home</span>
+        <span class="card-sub">Something in our rotation</span>
+        <span class="card-tag">Tried & true recipes</span>
+      </button>
+
+      <button class="mode-card card-new-home" onclick="selectMode('new_home')">
+        <span class="card-emoji">📖</span>
+        <span class="card-title">Cook Something New</span>
+        <span class="card-sub">A recipe we want to try</span>
+        <span class="card-tag">Kitchen experiment</span>
+      </button>
+
+    </div>
+
+    <!-- SURPRISE ME -->
+    <div class="surprise-wrap">
+      <p class="surprise-label">Can't even decide that much?</p>
+      <button class="btn-surprise" onclick="surpriseMe()">
+        <span class="surprise-dice">🎲</span>
+        <span>Surprise Me!</span>
+      </button>
+      <p class="surprise-hint">Picks something completely random from everything.</p>
+    </div>
+  </section>
+
+  <!-- ===================== MOOD FILTER SCREEN ===================== -->
+  <section id="screen-mood" class="screen">
+    <div class="filter-header">
+      <h2 id="mood-title">How are you two feeling?</h2>
+      <p>Answer a couple questions and we'll narrow it down.</p>
+    </div>
+    <div class="mood-grid">
+
+      <div class="mood-group">
+        <p class="mood-question">😋 How hungry are you?</p>
+        <div class="mood-options" id="mood-hunger">
+          <button class="mood-btn" data-mood="hunger" data-val="snacky">
+            <span>🍿</span><span class="mood-btn-label">Just snacky</span>
+            <span class="mood-btn-sub">Something light</span>
+          </button>
+          <button class="mood-btn active" data-mood="hunger" data-val="normal">
+            <span>🍽️</span><span class="mood-btn-label">Normal hungry</span>
+            <span class="mood-btn-sub">A proper meal</span>
+          </button>
+          <button class="mood-btn" data-mood="hunger" data-val="starving">
+            <span>🤤</span><span class="mood-btn-label">Absolutely starving</span>
+            <span class="mood-btn-sub">Go big or go home</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="mood-group">
+        <p class="mood-question">🌶️ How adventurous are you feeling?</p>
+        <div class="mood-options" id="mood-adventure">
+          <button class="mood-btn" data-mood="adventure" data-val="cozy">
+            <span>🧸</span><span class="mood-btn-label">Cozy &amp; familiar</span>
+            <span class="mood-btn-sub">The classics, please</span>
+          </button>
+          <button class="mood-btn active" data-mood="adventure" data-val="mixed">
+            <span>🙂</span><span class="mood-btn-label">Somewhere in between</span>
+            <span class="mood-btn-sub">Open to anything</span>
+          </button>
+          <button class="mood-btn" data-mood="adventure" data-val="wild">
+            <span>🚀</span><span class="mood-btn-label">Feeling adventurous</span>
+            <span class="mood-btn-sub">Surprise us!</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="mood-group">
+        <p class="mood-question">🚗 How far will you drive?</p>
+        <div class="mood-options" id="mood-distance">
+          <button class="mood-btn" data-mood="distance" data-val="close">
+            <span>🏘️</span><span class="mood-btn-label">Super close</span>
+            <span class="mood-btn-sub">Under 10 miles</span>
+          </button>
+          <button class="mood-btn active" data-mood="distance" data-val="medium">
+            <span>🚗</span><span class="mood-btn-label">A bit of a drive</span>
+            <span class="mood-btn-sub">Up to 20 miles</span>
+          </button>
+          <button class="mood-btn" data-mood="distance" data-val="far">
+            <span>🗺️</span><span class="mood-btn-label">Road trip mode</span>
+            <span class="mood-btn-sub">Anywhere!</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="mood-group">
+        <p class="mood-question">⏰ What time is it?</p>
+        <div class="mood-options" id="mood-time">
+          <button class="mood-btn" data-mood="time" data-val="breakfast">
+            <span>🌅</span><span class="mood-btn-label">Morning</span>
+            <span class="mood-btn-sub">Breakfast / brunch</span>
+          </button>
+          <button class="mood-btn" data-mood="time" data-val="lunch">
+            <span>☀️</span><span class="mood-btn-label">Midday</span>
+            <span class="mood-btn-sub">Lunch</span>
+          </button>
+          <button class="mood-btn active" data-mood="time" data-val="dinner">
+            <span>🌙</span><span class="mood-btn-label">Evening</span>
+            <span class="mood-btn-sub">Dinner</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+    <div class="filter-actions">
+      <button class="btn-decide" onclick="applyMoodFilters()">
+        <span>Find Our Dinner!</span>
+        <span class="btn-icon">✨</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ===================== FILTER SCREEN ===================== -->
+  <section id="screen-filter" class="screen">
+    <div class="filter-header">
+      <h2 id="filter-title">Let's narrow it down</h2>
+      <p id="filter-subtitle">Use any filters you like — or skip them all and let fate decide!</p>
+    </div>
+
+    <div class="filter-grid">
+
+      <div class="filter-group">
+        <label class="filter-label">🌅 Meal Type</label>
+        <div class="pill-group" id="filter-meal">
+          <button class="pill active" data-filter="meal" data-val="any">Any</button>
+          <button class="pill" data-filter="meal" data-val="breakfast">Breakfast</button>
+          <button class="pill" data-filter="meal" data-val="lunch">Lunch</button>
+          <button class="pill" data-filter="meal" data-val="dinner">Dinner</button>
+          <button class="pill" data-filter="meal" data-val="breakfast-lunch">Brunch</button>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">🌍 Cuisine</label>
+        <div class="pill-group" id="filter-cuisine">
+          <button class="pill active" data-filter="cuisine" data-val="any">Any</button>
+          <button class="pill" data-filter="cuisine" data-val="American">American</button>
+          <button class="pill" data-filter="cuisine" data-val="Mexican">Mexican</button>
+          <button class="pill" data-filter="cuisine" data-val="Italian">Italian</button>
+          <button class="pill" data-filter="cuisine" data-val="Indian">Indian</button>
+          <button class="pill" data-filter="cuisine" data-val="Asian">Asian</button>
+          <button class="pill" data-filter="cuisine" data-val="Mediterranean">Mediterranean</button>
+          <button class="pill" data-filter="cuisine" data-val="Pizza">Pizza</button>
+          <button class="pill" data-filter="cuisine" data-val="Japanese">Japanese</button>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">🥩 Protein</label>
+        <div class="pill-group" id="filter-protein">
+          <button class="pill active" data-filter="protein" data-val="any">Any</button>
+          <button class="pill" data-filter="protein" data-val="chicken">Chicken</button>
+          <button class="pill" data-filter="protein" data-val="beef">Beef</button>
+          <button class="pill" data-filter="protein" data-val="fish">Fish/Seafood</button>
+          <button class="pill" data-filter="protein" data-val="pork">Pork</button>
+          <button class="pill" data-filter="protein" data-val="egg">Eggs</button>
+          <button class="pill" data-filter="protein" data-val="vegetarian">Vegetarian</button>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">🍞 Carbs</label>
+        <div class="pill-group" id="filter-carbs">
+          <button class="pill active" data-filter="carbs" data-val="any">Any</button>
+          <button class="pill" data-filter="carbs" data-val="pasta">Pasta</button>
+          <button class="pill" data-filter="carbs" data-val="rice">Rice</button>
+          <button class="pill" data-filter="carbs" data-val="tortilla">Tortilla</button>
+          <button class="pill" data-filter="carbs" data-val="pizza dough">Pizza</button>
+          <button class="pill" data-filter="carbs" data-val="bread">Bread</button>
+          <button class="pill" data-filter="carbs" data-val="naan">Naan</button>
+          <button class="pill" data-filter="carbs" data-val="low-carb">Low Carb</button>
+        </div>
+      </div>
+
+      <div class="filter-group" id="filter-distance-group">
+        <label class="filter-label">📍 Max Distance</label>
+        <div class="pill-group" id="filter-distance">
+          <button class="pill active" data-filter="distance" data-val="any">Any</button>
+          <button class="pill" data-filter="distance" data-val="10">Under 10 mi</button>
+          <button class="pill" data-filter="distance" data-val="15">Under 15 mi</button>
+          <button class="pill" data-filter="distance" data-val="20">Under 20 mi</button>
+          <button class="pill" data-filter="distance" data-val="50">Up to 50 mi</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="filter-actions" style="flex-direction:column; align-items:center; gap:0.75rem;">
+      <button class="btn-decide" onclick="findOptions()">
+        <span>Show Me Options!</span>
+        <span class="btn-icon">🎲</span>
+      </button>
+      <button class="btn-mood-toggle" id="btn-mood-toggle" onclick="goToMood()">✨ Try the Mood Filter instead</button>
+    </div>
+  </section>
+
+  <!-- ===================== RESULTS SCREEN ===================== -->
+  <section id="screen-results" class="screen">
+    <div class="results-header">
+      <h2 id="results-title">Here's what we found!</h2>
+      <p id="results-count"></p>
+    </div>
+
+    <!-- V5: SEARCH BAR -->
+    <div class="search-wrap">
+      <input
+        type="text"
+        id="search-input"
+        class="search-input"
+        placeholder="🔍 Search by name…"
+        oninput="filterSearch()"
+        autocomplete="off"
+        spellcheck="false"
+      />
+    </div>
+
+    <div class="results-layout">
+      <div id="results-grid" class="results-grid"></div>
+
+      <div class="right-col">
+        <!-- Spin the Wheel Panel -->
+        <div class="wheel-panel">
+          <h3 class="wheel-title">Can't decide? 🎡</h3>
+          <p class="wheel-sub">Spin the wheel — fate will choose for you.</p>
+          <div class="wheel-container">
+            <canvas id="wheel-canvas" width="280" height="280"></canvas>
+            <div class="wheel-pointer">▼</div>
+          </div>
+          <button class="btn-spin" id="spin-btn" onclick="spinWheel()">Spin it! 🎲</button>
+          <div id="spin-result" class="spin-result hidden"></div>
+          <!-- V5: Veto button lives here, shown dynamically -->
+          <button class="btn-veto hidden" id="veto-btn" onclick="vetoAndRespin()">🚫 Veto — spin again!</button>
+        </div>
+
+        <!-- Save Ratings Banner -->
+        <div class="save-banner hidden" id="save-banner">
+          <p class="save-banner-msg">⭐ You've added ratings! Save them to your data file to keep them permanently.</p>
+          <button class="btn-save-csv" onclick="downloadUpdatedCSV()">💾 Download Updated CSV</button>
+          <p class="save-banner-hint" id="save-hint-text">Then replace your <code>data/food_data.csv</code> with this file.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="results-actions">
+      <button class="btn-secondary" onclick="goToFilters()">← Adjust Filters</button>
+      <!-- V5: Head to Head button -->
+      <button class="btn-h2h" id="btn-h2h" onclick="startH2H()">⚔️ Head to Head</button>
+      <button class="btn-secondary" onclick="goHome()">Start Over</button>
+    </div>
+  </section>
+
+  <!-- ===================== HEAD TO HEAD SCREEN (V5 NEW) ===================== -->
+  <section id="screen-h2h" class="screen">
+
+    <!-- PHASE: PICKING (p1 / p2) -->
+    <div id="h2h-pick-phase">
+      <div class="h2h-header">
+        <div class="h2h-player-badge" id="h2h-player-badge">👤 Player 1</div>
+        <h2 id="h2h-title">Secretly pick your favorites</h2>
+        <p id="h2h-sub">Tap the options you'd be happy with tonight. Pick as many as you like!</p>
+        <div class="h2h-counter" id="h2h-counter">0 selected</div>
+      </div>
+      <div id="h2h-grid" class="results-grid h2h-grid"></div>
+      <div class="h2h-pick-actions">
+        <button class="btn-secondary" onclick="cancelH2H()">← Back to Results</button>
+        <button class="btn-decide" id="h2h-done-btn" onclick="h2hNext()">
+          <span id="h2h-done-label">Done! 👉</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- PHASE: HANDOFF SCREEN -->
+    <div id="h2h-handoff-phase" class="h2h-handoff hidden">
+      <div class="h2h-handoff-inner">
+        <div class="h2h-handoff-emoji">🤫</div>
+        <h2>Player 1 is done!</h2>
+        <p>Pass the phone to <strong>Player 2</strong> — don't peek at each other's picks!</p>
+        <button class="btn-decide" onclick="showH2HP2Grid()">
+          <span>I'm Player 2 — show me the options!</span>
+          <span class="btn-icon">🍽️</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- PHASE: REVEAL -->
+    <div id="h2h-reveal-phase" class="hidden">
+      <div class="h2h-reveal-header">
+        <h2 id="h2h-reveal-title">🎉 The Results Are In!</h2>
+        <p id="h2h-reveal-sub"></p>
+      </div>
+      <div id="h2h-reveal-content"></div>
+      <div class="h2h-reveal-actions">
+        <button class="btn-decide" onclick="cancelH2H()">← Back to Results</button>
+        <button class="btn-secondary" onclick="goHome()">Start Over</button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ===================== SURPRISE RESULT SCREEN ===================== -->
+  <section id="screen-surprise" class="screen">
+    <div class="surprise-result-wrap">
+      <div class="surprise-result-card" id="surprise-card"></div>
+      <div class="surprise-actions">
+        <button class="btn-decide" onclick="surpriseMe()">
+          <span>Pick Again 🎲</span>
+        </button>
+        <button class="btn-secondary" onclick="goHome()">Start Over</button>
+      </div>
+      <div class="save-banner hidden" id="save-banner-surprise">
+        <p class="save-banner-msg">⭐ You've added a rating! Save it to your data file.</p>
+        <button class="btn-save-csv" onclick="downloadUpdatedCSV()">💾 Download Updated CSV</button>
+        <p class="save-banner-hint" id="save-hint-text-surprise">Replace your <code>data/food_data.csv</code> with this file.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== NO RESULTS ===================== -->
+  <section id="screen-noresults" class="screen">
+    <div class="noresults-content">
+      <span class="noresults-emoji">😔</span>
+      <h2>Nothing matched those filters!</h2>
+      <p>Try loosening a filter or two — or just let fate decide.</p>
+      <button class="btn-decide" onclick="goToFilters()">← Try Different Filters</button>
+    </div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
