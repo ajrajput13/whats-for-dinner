@@ -8,9 +8,6 @@
   <meta name="apple-mobile-web-app-title" content="What's For Dinner" />
   <meta name="theme-color" content="#F5E1C8" />
   <title>What's for Dinner? 🍽️</title>
-  <link rel="apple-touch-icon" href="wfd-icon.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="wfd-icon-512.png">
-  <link rel="icon" type="image/png" sizes="180x180" href="wfd-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
@@ -33,7 +30,7 @@
       <div class="header-right">
         <span id="sync-status" class="sync-status" title="Sync status"></span>
         <button class="dark-toggle" id="dark-toggle" onclick="toggleDark()" title="Toggle dark mode">🌙</button>
-        <button class="home-btn" onclick="goHome()">← Start Over</button>
+        <button class="home-btn" onclick="openConfigure()">⚙️ Configure</button>
       </div>
     </div>
   </header>
@@ -389,6 +386,163 @@
       <p>Try loosening a filter or two — or just let fate decide.</p>
       <button class="btn-decide" onclick="goToFilters()">← Try Different Filters</button>
     </div>
+  </section>
+
+  <!-- ===================== CONFIGURE — LIST ===================== -->
+  <section id="screen-configure" class="screen">
+    <div class="configure-header">
+      <button class="back-btn" onclick="goHome()">← Back</button>
+      <h2 class="configure-title">⚙️ Manage Restaurants &amp; Recipes</h2>
+      <button class="btn-add-new" onclick="openAddForm()">+ Add New</button>
+    </div>
+
+    <div class="configure-controls">
+      <input
+        type="text"
+        id="configure-search"
+        class="search-input"
+        placeholder="🔍 Search by name…"
+        oninput="renderConfigureList()"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <div class="configure-filter-chips" id="configure-filter-chips">
+        <button class="config-chip active" data-cat="all"                  onclick="setConfigureFilter('all',this)">All <span class="config-chip-count" id="cfg-count-all">0</span></button>
+        <button class="config-chip" data-cat="familiar_restaurant"         onclick="setConfigureFilter('familiar_restaurant',this)">🍴 Familiar Out <span class="config-chip-count" id="cfg-count-familiar_restaurant">0</span></button>
+        <button class="config-chip" data-cat="new_restaurant"              onclick="setConfigureFilter('new_restaurant',this)">✨ New Out <span class="config-chip-count" id="cfg-count-new_restaurant">0</span></button>
+        <button class="config-chip" data-cat="familiar_home"               onclick="setConfigureFilter('familiar_home',this)">🥘 Familiar Home <span class="config-chip-count" id="cfg-count-familiar_home">0</span></button>
+        <button class="config-chip" data-cat="new_home"                    onclick="setConfigureFilter('new_home',this)">📖 New Home <span class="config-chip-count" id="cfg-count-new_home">0</span></button>
+      </div>
+    </div>
+
+    <div id="configure-list" class="configure-list"></div>
+    <div id="configure-empty" class="configure-empty hidden">
+      <span class="noresults-emoji">🍽️</span>
+      <p>Nothing here yet. Tap <strong>+ Add New</strong> to get started!</p>
+    </div>
+  </section>
+
+  <!-- ===================== ADD / EDIT FORM ===================== -->
+  <section id="screen-edit" class="screen">
+    <div class="edit-header">
+      <button class="back-btn" onclick="closeEditForm()">← Cancel</button>
+      <h2 id="edit-title" class="configure-title">Add New</h2>
+      <span style="width: 80px;"></span>
+    </div>
+
+    <form id="edit-form" class="edit-form" onsubmit="event.preventDefault(); saveEditForm();">
+
+      <div class="edit-field">
+        <label class="edit-label">Name <span class="req">*</span></label>
+        <input type="text" id="ef-name" class="edit-input" required maxlength="100" placeholder="e.g. Joe's Pizza or Tomato Risotto">
+      </div>
+
+      <div class="edit-field">
+        <label class="edit-label">Category <span class="req">*</span></label>
+        <div class="edit-pills" id="ef-category">
+          <button type="button" class="edit-pill" data-val="familiar_restaurant">🍴 Familiar Restaurant</button>
+          <button type="button" class="edit-pill" data-val="new_restaurant">✨ New Restaurant</button>
+          <button type="button" class="edit-pill" data-val="familiar_home">🥘 Familiar Recipe</button>
+          <button type="button" class="edit-pill" data-val="new_home">📖 New Recipe</button>
+        </div>
+      </div>
+
+      <div class="edit-field">
+        <label class="edit-label">Cuisine</label>
+        <div class="edit-pills edit-pills-multi" id="ef-cuisine">
+          <button type="button" class="edit-pill" data-val="American">🍔 American</button>
+          <button type="button" class="edit-pill" data-val="Mexican">🌮 Mexican</button>
+          <button type="button" class="edit-pill" data-val="Italian">🍝 Italian</button>
+          <button type="button" class="edit-pill" data-val="Indian">🍛 Indian</button>
+          <button type="button" class="edit-pill" data-val="Asian">🥢 Asian</button>
+          <button type="button" class="edit-pill" data-val="Mediterranean">🫒 Mediterranean</button>
+          <button type="button" class="edit-pill" data-val="Pizza">🍕 Pizza</button>
+          <button type="button" class="edit-pill" data-val="Japanese">🍱 Japanese</button>
+          <button type="button" class="edit-pill" data-val="Chinese">🥡 Chinese</button>
+          <button type="button" class="edit-pill" data-val="Thai">🍜 Thai</button>
+          <button type="button" class="edit-pill" data-val="Brunch">🥞 Brunch</button>
+          <button type="button" class="edit-pill" data-val="Bakery">🥐 Bakery</button>
+          <button type="button" class="edit-pill" data-val="Cafe">☕ Cafe</button>
+          <button type="button" class="edit-pill" data-val="Fast Food">🍟 Fast Food</button>
+        </div>
+        <div class="edit-hint">Pick one or more (or leave none)</div>
+      </div>
+
+      <div class="edit-field">
+        <label class="edit-label">Meal Type</label>
+        <div class="edit-pills" id="ef-meal">
+          <button type="button" class="edit-pill" data-val="any">Any time</button>
+          <button type="button" class="edit-pill" data-val="breakfast">Breakfast</button>
+          <button type="button" class="edit-pill" data-val="lunch">Lunch</button>
+          <button type="button" class="edit-pill" data-val="dinner">Dinner</button>
+          <button type="button" class="edit-pill" data-val="breakfast-lunch">Brunch</button>
+          <button type="button" class="edit-pill" data-val="lunch-dinner">Lunch or Dinner</button>
+        </div>
+      </div>
+
+      <div class="edit-field">
+        <label class="edit-label">Protein</label>
+        <div class="edit-pills edit-pills-multi" id="ef-protein">
+          <button type="button" class="edit-pill" data-val="any">Any</button>
+          <button type="button" class="edit-pill" data-val="chicken">🐔 Chicken</button>
+          <button type="button" class="edit-pill" data-val="beef">🥩 Beef</button>
+          <button type="button" class="edit-pill" data-val="fish">🐟 Fish/Seafood</button>
+          <button type="button" class="edit-pill" data-val="pork">🐖 Pork</button>
+          <button type="button" class="edit-pill" data-val="egg">🥚 Egg</button>
+          <button type="button" class="edit-pill" data-val="vegetarian">🌱 Vegetarian</button>
+        </div>
+      </div>
+
+      <div class="edit-field">
+        <label class="edit-label">Carbs</label>
+        <div class="edit-pills edit-pills-multi" id="ef-carbs">
+          <button type="button" class="edit-pill" data-val="any">Any</button>
+          <button type="button" class="edit-pill" data-val="pasta">🍝 Pasta</button>
+          <button type="button" class="edit-pill" data-val="rice">🍚 Rice</button>
+          <button type="button" class="edit-pill" data-val="tortilla">🌮 Tortilla</button>
+          <button type="button" class="edit-pill" data-val="pizza dough">🍕 Pizza Dough</button>
+          <button type="button" class="edit-pill" data-val="bread">🍞 Bread</button>
+          <button type="button" class="edit-pill" data-val="naan">🫓 Naan</button>
+          <button type="button" class="edit-pill" data-val="low-carb">🥬 Low Carb</button>
+        </div>
+      </div>
+
+      <div class="edit-field" id="ef-distance-field">
+        <label class="edit-label">📍 Distance (miles)</label>
+        <input type="number" id="ef-distance" class="edit-input" min="0" max="200" step="0.5" placeholder="e.g. 8">
+        <div class="edit-hint">From your home. Leave blank or 0 if it's a recipe.</div>
+      </div>
+
+      <div class="edit-field">
+        <label class="edit-label">📝 Notes</label>
+        <textarea id="ef-notes" class="edit-textarea" rows="2" placeholder="Quick notes — what's it like, favorite drinks, etc."></textarea>
+      </div>
+
+      <div class="edit-field" id="ef-recipe-field">
+        <label class="edit-label">👨‍🍳 Recipe</label>
+        <textarea id="ef-recipe" class="edit-textarea edit-textarea-lg" rows="10" placeholder="Paste or type the full recipe here — ingredients, steps, everything."></textarea>
+      </div>
+
+      <div class="edit-field" id="ef-review-field">
+        <label class="edit-label">⭐ Your Review</label>
+        <div class="edit-stars" id="ef-stars">
+          <button type="button" class="edit-star" data-stars="1">★</button>
+          <button type="button" class="edit-star" data-stars="2">★</button>
+          <button type="button" class="edit-star" data-stars="3">★</button>
+          <button type="button" class="edit-star" data-stars="4">★</button>
+          <button type="button" class="edit-star" data-stars="5">★</button>
+          <button type="button" class="edit-star-clear" onclick="clearEditStars()">Clear</button>
+        </div>
+        <textarea id="ef-review" class="edit-textarea" rows="2" placeholder="What did you think? (optional)"></textarea>
+      </div>
+
+      <div class="edit-actions">
+        <button type="submit" class="btn-decide btn-save-form">💾 Save</button>
+        <button type="button" class="btn-secondary" onclick="closeEditForm()">Cancel</button>
+        <button type="button" class="btn-delete hidden" id="ef-delete" onclick="deleteEditForm()">🗑️ Delete</button>
+      </div>
+
+    </form>
   </section>
 
   <script src="app.js"></script>
