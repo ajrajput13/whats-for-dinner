@@ -1935,3 +1935,99 @@ body.modal-open {
   .edit-pill { padding: 8px 13px; font-size: 0.8rem; }
   .btn-delete { margin-left: 0; flex: 1; min-width: 140px; }
 }
+
+/* ─── DARK MODE — button contrast fixes ──────────────────────── */
+
+/* In dark mode, --espresso flips to light cream. Buttons that used
+   espresso as their dark background need explicit dark backgrounds. */
+[data-theme="dark"] .btn-spin {
+  background: linear-gradient(135deg, #5C3F22 0%, #3F2810 100%);
+  color: var(--gold-light);
+  border: 1px solid var(--tan);
+}
+[data-theme="dark"] .btn-spin:hover {
+  background: linear-gradient(135deg, #6B4A28 0%, #4A3015 100%);
+  color: #FFD96B;
+}
+
+[data-theme="dark"] .btn-h2h {
+  background: linear-gradient(135deg, #6B4A28 0%, #C4623A 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+[data-theme="dark"] .btn-h2h:hover {
+  background: linear-gradient(135deg, #7A5530 0%, #D4724A 100%);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+[data-theme="dark"] .btn-surprise {
+  background: linear-gradient(135deg, #5C3F22 0%, #C4623A 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+}
+[data-theme="dark"] .btn-surprise:hover {
+  background: linear-gradient(135deg, #6B4A28 0%, #D4724A 100%);
+  box-shadow: 0 14px 40px rgba(0,0,0,0.6);
+}
+
+[data-theme="dark"] .btn-secondary {
+  background: var(--parchment);
+  border-color: var(--tan);
+  color: var(--espresso);
+}
+[data-theme="dark"] .btn-secondary:hover {
+  background: var(--tan);
+  border-color: var(--brown-mid);
+}
+
+/* ─── "+ Add new" pill for filter groups ─────────────────────── */
+.edit-pill.edit-pill-add {
+  background: transparent;
+  border: 1.5px dashed var(--tan);
+  color: var(--brown-mid);
+  font-weight: 500;
+}
+.edit-pill.edit-pill-add:hover {
+  background: var(--cream);
+  border-color: var(--brown-mid);
+  color: var(--brown-dark);
+}
+.edit-pill.edit-pill-add.active {
+  /* "Add new" should never be in the "active" state — it's an action button */
+  background: transparent;
+  color: var(--brown-mid);
+  border-color: var(--tan);
+}
+[data-theme="dark"] .edit-pill.edit-pill-add {
+  background: transparent;
+  border-color: var(--tan);
+  color: var(--brown-mid);
+}
+[data-theme="dark"] .edit-pill.edit-pill-add:hover {
+  background: var(--parchment);
+  border-color: var(--brown-mid);
+  color: var(--brown-dark);
+}
+
+/* Duplicate name warning */
+.edit-dup-warn {
+  background: #FEF0EA;
+  color: #C0392B;
+  border: 1px solid #F5C3B3;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  margin-top: 6px;
+}
+[data-theme="dark"] .edit-dup-warn {
+  background: rgba(192, 57, 43, 0.15);
+  color: #F0A89C;
+  border-color: rgba(240, 168, 156, 0.25);
+}
+.input-error {
+  border-color: #C0392B !important;
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12) !important;
+}
