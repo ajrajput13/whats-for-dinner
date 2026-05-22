@@ -185,53 +185,28 @@
       <div class="filter-group">
         <label class="filter-label">🌅 Meal Type</label>
         <div class="pill-group" id="filter-meal">
-          <button class="pill active" data-filter="meal" data-val="any">Any</button>
-          <button class="pill" data-filter="meal" data-val="breakfast">Breakfast</button>
-          <button class="pill" data-filter="meal" data-val="lunch">Lunch</button>
-          <button class="pill" data-filter="meal" data-val="dinner">Dinner</button>
-          <button class="pill" data-filter="meal" data-val="breakfast-lunch">Brunch</button>
+          <!-- Populated dynamically -->
         </div>
       </div>
 
       <div class="filter-group">
         <label class="filter-label">🌍 Cuisine</label>
         <div class="pill-group" id="filter-cuisine">
-          <button class="pill active" data-filter="cuisine" data-val="any">Any</button>
-          <button class="pill" data-filter="cuisine" data-val="American">American</button>
-          <button class="pill" data-filter="cuisine" data-val="Mexican">Mexican</button>
-          <button class="pill" data-filter="cuisine" data-val="Italian">Italian</button>
-          <button class="pill" data-filter="cuisine" data-val="Indian">Indian</button>
-          <button class="pill" data-filter="cuisine" data-val="Asian">Asian</button>
-          <button class="pill" data-filter="cuisine" data-val="Mediterranean">Mediterranean</button>
-          <button class="pill" data-filter="cuisine" data-val="Pizza">Pizza</button>
-          <button class="pill" data-filter="cuisine" data-val="Japanese">Japanese</button>
+          <!-- Populated dynamically -->
         </div>
       </div>
 
       <div class="filter-group">
         <label class="filter-label">🥩 Protein</label>
         <div class="pill-group" id="filter-protein">
-          <button class="pill active" data-filter="protein" data-val="any">Any</button>
-          <button class="pill" data-filter="protein" data-val="chicken">Chicken</button>
-          <button class="pill" data-filter="protein" data-val="beef">Beef</button>
-          <button class="pill" data-filter="protein" data-val="fish">Fish/Seafood</button>
-          <button class="pill" data-filter="protein" data-val="pork">Pork</button>
-          <button class="pill" data-filter="protein" data-val="egg">Eggs</button>
-          <button class="pill" data-filter="protein" data-val="vegetarian">Vegetarian</button>
+          <!-- Populated dynamically -->
         </div>
       </div>
 
       <div class="filter-group">
         <label class="filter-label">🍞 Carbs</label>
         <div class="pill-group" id="filter-carbs">
-          <button class="pill active" data-filter="carbs" data-val="any">Any</button>
-          <button class="pill" data-filter="carbs" data-val="pasta">Pasta</button>
-          <button class="pill" data-filter="carbs" data-val="rice">Rice</button>
-          <button class="pill" data-filter="carbs" data-val="tortilla">Tortilla</button>
-          <button class="pill" data-filter="carbs" data-val="pizza dough">Pizza</button>
-          <button class="pill" data-filter="carbs" data-val="bread">Bread</button>
-          <button class="pill" data-filter="carbs" data-val="naan">Naan</button>
-          <button class="pill" data-filter="carbs" data-val="low-carb">Low Carb</button>
+          <!-- Populated dynamically -->
         </div>
       </div>
 
@@ -434,7 +409,8 @@
 
       <div class="edit-field">
         <label class="edit-label">Name <span class="req">*</span></label>
-        <input type="text" id="ef-name" class="edit-input" required maxlength="100" placeholder="e.g. Joe's Pizza or Tomato Risotto">
+        <input type="text" id="ef-name" class="edit-input" required maxlength="100" placeholder="e.g. Joe's Pizza or Tomato Risotto" oninput="checkDuplicateName()">
+        <div class="edit-dup-warn hidden" id="ef-name-warn"></div>
       </div>
 
       <div class="edit-field">
@@ -450,60 +426,30 @@
       <div class="edit-field">
         <label class="edit-label">Cuisine</label>
         <div class="edit-pills edit-pills-multi" id="ef-cuisine">
-          <button type="button" class="edit-pill" data-val="American">🍔 American</button>
-          <button type="button" class="edit-pill" data-val="Mexican">🌮 Mexican</button>
-          <button type="button" class="edit-pill" data-val="Italian">🍝 Italian</button>
-          <button type="button" class="edit-pill" data-val="Indian">🍛 Indian</button>
-          <button type="button" class="edit-pill" data-val="Asian">🥢 Asian</button>
-          <button type="button" class="edit-pill" data-val="Mediterranean">🫒 Mediterranean</button>
-          <button type="button" class="edit-pill" data-val="Pizza">🍕 Pizza</button>
-          <button type="button" class="edit-pill" data-val="Japanese">🍱 Japanese</button>
-          <button type="button" class="edit-pill" data-val="Chinese">🥡 Chinese</button>
-          <button type="button" class="edit-pill" data-val="Thai">🍜 Thai</button>
-          <button type="button" class="edit-pill" data-val="Brunch">🥞 Brunch</button>
-          <button type="button" class="edit-pill" data-val="Bakery">🥐 Bakery</button>
-          <button type="button" class="edit-pill" data-val="Cafe">☕ Cafe</button>
-          <button type="button" class="edit-pill" data-val="Fast Food">🍟 Fast Food</button>
+          <!-- Populated dynamically; includes a "+ Add new" pill at the end -->
         </div>
-        <div class="edit-hint">Pick one or more (or leave none)</div>
+        <div class="edit-hint">Pick one or more (or leave none). Tap <strong>+ Add new</strong> to add your own.</div>
       </div>
 
       <div class="edit-field">
         <label class="edit-label">Meal Type</label>
         <div class="edit-pills" id="ef-meal">
-          <button type="button" class="edit-pill" data-val="any">Any time</button>
-          <button type="button" class="edit-pill" data-val="breakfast">Breakfast</button>
-          <button type="button" class="edit-pill" data-val="lunch">Lunch</button>
-          <button type="button" class="edit-pill" data-val="dinner">Dinner</button>
-          <button type="button" class="edit-pill" data-val="breakfast-lunch">Brunch</button>
-          <button type="button" class="edit-pill" data-val="lunch-dinner">Lunch or Dinner</button>
+          <!-- Populated dynamically -->
         </div>
+        <div class="edit-hint">💡 The Mood Filter uses your category, meal type, and distance — no separate mood field needed!</div>
       </div>
 
       <div class="edit-field">
         <label class="edit-label">Protein</label>
         <div class="edit-pills edit-pills-multi" id="ef-protein">
-          <button type="button" class="edit-pill" data-val="any">Any</button>
-          <button type="button" class="edit-pill" data-val="chicken">🐔 Chicken</button>
-          <button type="button" class="edit-pill" data-val="beef">🥩 Beef</button>
-          <button type="button" class="edit-pill" data-val="fish">🐟 Fish/Seafood</button>
-          <button type="button" class="edit-pill" data-val="pork">🐖 Pork</button>
-          <button type="button" class="edit-pill" data-val="egg">🥚 Egg</button>
-          <button type="button" class="edit-pill" data-val="vegetarian">🌱 Vegetarian</button>
+          <!-- Populated dynamically -->
         </div>
       </div>
 
       <div class="edit-field">
         <label class="edit-label">Carbs</label>
         <div class="edit-pills edit-pills-multi" id="ef-carbs">
-          <button type="button" class="edit-pill" data-val="any">Any</button>
-          <button type="button" class="edit-pill" data-val="pasta">🍝 Pasta</button>
-          <button type="button" class="edit-pill" data-val="rice">🍚 Rice</button>
-          <button type="button" class="edit-pill" data-val="tortilla">🌮 Tortilla</button>
-          <button type="button" class="edit-pill" data-val="pizza dough">🍕 Pizza Dough</button>
-          <button type="button" class="edit-pill" data-val="bread">🍞 Bread</button>
-          <button type="button" class="edit-pill" data-val="naan">🫓 Naan</button>
-          <button type="button" class="edit-pill" data-val="low-carb">🥬 Low Carb</button>
+          <!-- Populated dynamically -->
         </div>
       </div>
 
