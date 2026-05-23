@@ -13,7 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=3" />
 </head>
 <body>
 
@@ -409,8 +409,8 @@
 
       <div class="edit-field">
         <label class="edit-label">Name <span class="req">*</span></label>
-        <input type="text" id="ef-name" class="edit-input" required maxlength="100" placeholder="e.g. Joe's Pizza or Tomato Risotto" oninput="checkDuplicateName()">
         <div class="edit-dup-warn hidden" id="ef-name-warn"></div>
+        <input type="text" id="ef-name" class="edit-input" required maxlength="100" placeholder="e.g. Joe's Pizza or Tomato Risotto" oninput="checkDuplicateName()">
       </div>
 
       <div class="edit-field">
@@ -491,6 +491,6 @@
     </form>
   </section>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>
