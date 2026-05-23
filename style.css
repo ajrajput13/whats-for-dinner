@@ -1940,34 +1940,34 @@ body.modal-open {
 
 /* In dark mode, --espresso flips to light cream. Buttons that used
    espresso as their dark background need explicit dark backgrounds. */
-[data-theme="dark"] .btn-spin {
+body[data-theme="dark"] .btn-spin {
   background: linear-gradient(135deg, #5C3F22 0%, #3F2810 100%);
   color: var(--gold-light);
   border: 1px solid var(--tan);
 }
-[data-theme="dark"] .btn-spin:hover {
+body[data-theme="dark"] .btn-spin:hover {
   background: linear-gradient(135deg, #6B4A28 0%, #4A3015 100%);
   color: #FFD96B;
 }
 
-[data-theme="dark"] .btn-h2h {
+body[data-theme="dark"] .btn-h2h {
   background: linear-gradient(135deg, #6B4A28 0%, #C4623A 100%);
   color: #FFFFFF;
   border: 1px solid rgba(255,255,255,0.1);
   box-shadow: 0 4px 16px rgba(0,0,0,0.4);
 }
-[data-theme="dark"] .btn-h2h:hover {
+body[data-theme="dark"] .btn-h2h:hover {
   background: linear-gradient(135deg, #7A5530 0%, #D4724A 100%);
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
 }
 
-[data-theme="dark"] .btn-surprise {
+body[data-theme="dark"] .btn-surprise {
   background: linear-gradient(135deg, #5C3F22 0%, #C4623A 100%);
   color: #FFFFFF;
   border: 1px solid rgba(255,255,255,0.1);
   box-shadow: 0 8px 28px rgba(0,0,0,0.5);
 }
-[data-theme="dark"] .btn-surprise:hover {
+body[data-theme="dark"] .btn-surprise:hover {
   background: linear-gradient(135deg, #6B4A28 0%, #D4724A 100%);
   box-shadow: 0 14px 40px rgba(0,0,0,0.6);
 }
@@ -2015,19 +2015,82 @@ body.modal-open {
 .edit-dup-warn {
   background: #FEF0EA;
   color: #C0392B;
-  border: 1px solid #F5C3B3;
+  border: 1.5px solid #E07A6E;
   border-radius: 10px;
-  padding: 9px 14px;
-  font-size: 0.82rem;
-  line-height: 1.4;
-  margin-top: 6px;
+  padding: 11px 14px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+.edit-dup-warn.shake {
+  animation: dupShake 0.4s ease-in-out;
+}
+@keyframes dupShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
 }
 [data-theme="dark"] .edit-dup-warn {
-  background: rgba(192, 57, 43, 0.15);
+  background: rgba(192, 57, 43, 0.18);
   color: #F0A89C;
-  border-color: rgba(240, 168, 156, 0.25);
+  border-color: rgba(240, 122, 110, 0.45);
 }
 .input-error {
   border-color: #C0392B !important;
-  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12) !important;
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.18) !important;
+}
+
+/* Custom pill with delete button */
+.edit-pill-wrap {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: 24px;
+  overflow: hidden;
+  position: relative;
+}
+.edit-pill-wrap .edit-pill {
+  border-radius: 24px 0 0 24px;
+  border-right: none;
+  padding-right: 10px;
+}
+.edit-pill-wrap .edit-pill.active + .edit-pill-del {
+  background: var(--rust);
+  color: rgba(255,255,255,0.85);
+  border-color: var(--rust);
+}
+.edit-pill-del {
+  background: var(--warm-white);
+  color: var(--brown-light);
+  border: 1.5px solid var(--tan);
+  border-left: 1px solid var(--tan);
+  border-radius: 0 24px 24px 0;
+  padding: 0 12px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  margin-left: -1px; /* collapse the double border */
+}
+.edit-pill-del:hover {
+  background: #FEF0EA;
+  color: #C0392B;
+  border-color: #E07A6E;
+}
+[data-theme="dark"] .edit-pill-del {
+  background: var(--parchment);
+  color: var(--brown-mid);
+  border-color: var(--tan);
+}
+[data-theme="dark"] .edit-pill-del:hover {
+  background: rgba(192, 57, 43, 0.2);
+  color: #F0A89C;
+  border-color: rgba(240, 122, 110, 0.45);
 }
