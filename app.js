@@ -202,12 +202,74 @@ function renderEditFormPills() {
     const opts = getAllOptions(group);
     let html = '';
     opts.forEach(o => {
-      html += `<button type="button" class="edit-pill" data-val="${escapeAttr(o.val)}">${escapeHtml(o.label)}</button>`;
+      if (o.custom) {
+        // Custom options get an × button to allow deletion
+        html += `<span class="edit-pill-wrap">`
+              + `<button type="button" class="edit-pill" data-val="${escapeAttr(o.val)}">${escapeHtml(o.label)}</button>`
+              + `<button type="button" class="edit-pill-del" title="Delete this custom option" data-del-group="${escapeAttr(group)}" data-del-val="${escapeAttr(o.val)}">✕</button>`
+              + `</span>`;
+      } else {
+        html += `<button type="button" class="edit-pill" data-val="${escapeAttr(o.val)}">${escapeHtml(o.label)}</button>`;
+      }
     });
-    // Add the "+ Add new" pill at the end
-    html += `<button type="button" class="edit-pill edit-pill-add" data-add-group="${group}" onclick="promptAddOption('${group}')">+ Add new</button>`;
+    // Add the "+ Add new" pill at the end (uses data attr too, not onclick)
+    html += `<button type="button" class="edit-pill edit-pill-add" data-add-group="${escapeAttr(group)}">+ Add new</button>`;
     container.innerHTML = html;
   });
+}
+
+// Count how many items currently use a given option value in a given filter group
+function countItemsUsing(group, val) {
+  const fieldMap = { cuisine: 'cuisine', meal: 'meal_type', protein: 'protein', carbs: 'carbs' };
+  const field = fieldMap[group];
+  if (!field) return 0;
+  const valLower = String(val).toLowerCase();
+  let count = 0;
+  allItems.forEach(item => {
+    const fieldVal = (item[field] || '').toLowerCase();
+    if (!fieldVal) return;
+    // Fields use slash-delimited multi-values (e.g. "chicken/beef")
+    const parts = fieldVal.split('/').map(p => p.trim());
+    if (parts.includes(valLower)) count++;
+  });
+  return count;
+}
+
+// Delete a custom option (called from × button on custom pills)
+function deleteCustomOption(group, val) {
+  const usage = countItemsUsing(group, val);
+  if (usage > 0) {
+    showToast(`Can't delete "${val}" — ${usage} item${usage === 1 ? '' : 's'} still use${usage === 1 ? 's' : ''} it. Edit those first.`);
+    return;
+  }
+  if (!confirm(`Delete custom option "${val}" from ${group}?`)) return;
+
+  // Snapshot current form selections (since we'll re-render)
+  const snapshot = {};
+  ['cuisine','meal','protein','carbs'].forEach(g => {
+    snapshot[g] = Array.from(document.querySelectorAll(`#ef-${g} .edit-pill.active`))
+      .map(p => p.dataset.val);
+  });
+
+  // Remove from customOptions
+  customOptions[group] = (customOptions[group] || []).filter(o =>
+    String(o).toLowerCase() !== String(val).toLowerCase()
+  );
+  saveItemsNow();
+
+  // Re-render the pills (this wipes active classes)
+  renderEditFormPills();
+  renderFilterScreenPills();
+
+  // Restore previous selections (the deleted one is naturally gone now)
+  Object.keys(snapshot).forEach(g => {
+    snapshot[g].forEach(v => {
+      const pill = document.querySelector(`#ef-${g} .edit-pill[data-val="${CSS.escape(v)}"]`);
+      if (pill) pill.classList.add('active');
+    });
+  });
+
+  showToast(`Deleted "${val}"`);
 }
 
 // Re-render every dynamic option group everywhere
@@ -1507,6 +1569,16 @@ function checkDuplicateName() {
   }
 }
 
+// Trigger an attention-grabbing shake on the warning (called from save attempt)
+function shakeDupWarning() {
+  const warnEl = document.getElementById('ef-name-warn');
+  if (!warnEl) return;
+  warnEl.classList.remove('shake');
+  // Force reflow so the animation can restart
+  void warnEl.offsetWidth;
+  warnEl.classList.add('shake');
+}
+
 function setStars(n) {
   document.querySelectorAll('#ef-stars .edit-star').forEach(s => {
     s.classList.toggle('active', parseInt(s.dataset.stars) <= n);
@@ -1527,6 +1599,21 @@ function initEditFormListeners() {
     const c = document.getElementById(groupId);
     if (!c) return;
     c.addEventListener('click', e => {
+      // Handle + Add new button (delegated)
+      const addBtn = e.target.closest('.edit-pill-add');
+      if (addBtn) {
+        const group = addBtn.dataset.addGroup;
+        if (group) promptAddOption(group);
+        return;
+      }
+      // Handle × delete button (delegated)
+      const delBtn = e.target.closest('.edit-pill-del');
+      if (delBtn) {
+        e.stopPropagation();
+        deleteCustomOption(delBtn.dataset.delGroup, delBtn.dataset.delVal);
+        return;
+      }
+      // Regular pill toggle
       const btn = e.target.closest('.edit-pill');
       if (!btn || btn.classList.contains('edit-pill-add')) return;
       c.querySelectorAll('.edit-pill').forEach(p => p.classList.remove('active'));
@@ -1539,6 +1626,21 @@ function initEditFormListeners() {
     const c = document.getElementById(groupId);
     if (!c) return;
     c.addEventListener('click', e => {
+      // Handle + Add new button (delegated)
+      const addBtn = e.target.closest('.edit-pill-add');
+      if (addBtn) {
+        const group = addBtn.dataset.addGroup;
+        if (group) promptAddOption(group);
+        return;
+      }
+      // Handle × delete button (delegated)
+      const delBtn = e.target.closest('.edit-pill-del');
+      if (delBtn) {
+        e.stopPropagation();
+        deleteCustomOption(delBtn.dataset.delGroup, delBtn.dataset.delVal);
+        return;
+      }
+      // Regular pill toggle
       const btn = e.target.closest('.edit-pill');
       if (!btn || btn.classList.contains('edit-pill-add')) return;
       btn.classList.toggle('active');
@@ -1582,6 +1684,7 @@ function saveEditForm() {
   if (conflict) {
     showToast(`"${name}" already exists in your list.`);
     checkDuplicateName(); // populate the inline warning if not already shown
+    shakeDupWarning(); // attention-grabbing shake
     const nameEl = document.getElementById('ef-name');
     if (nameEl) {
       nameEl.focus();
